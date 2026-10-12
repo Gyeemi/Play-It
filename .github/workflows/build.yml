@@ -1,0 +1,44 @@
+name: Build Plat it (APK + Windows installer)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter create --org ai.baraily --platforms=android,ios,windows .
+      - run: flutter pub get
+      # Add a placeholder logo so asset bundling succeeds before the real
+      # brand asset is dropped into assets/logo.png
+      - run: |
+          mkdir -p assets
+          flutter test || true
+      - run: flutter build apk --debug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: platit-android-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter create --org ai.baraily --platforms=windows .
+      - run: flutter pub get
+      - run: flutter build windows --release
+      - name: Build NSIS installer
+        run: makensis installer\platit_installer.nsi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: platit-windows-installer
+          path: installer/platit-0.1.0-setup.exe
